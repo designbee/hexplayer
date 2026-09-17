@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/block_item.gd" id="1_item"]
+
+[node name="BlockItem" type="Button"]
+custom_minimum_size = Vector2(170, 40)
+toggle_mode = true
+script = ExtResource("1_item")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="IconBg" type="ColorRect" parent="HBox"]
+custom_minimum_size = Vector2(32, 32)
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HBox/IconBg"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="HBox"]
+mouse_filter = 2
+text = "区块"

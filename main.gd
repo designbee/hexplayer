@@ -1,5 +1,5 @@
 ## 主控制器
-## 工具切换（画笔/拖动/橡皮擦）、区块选择、输入分发、撤销/重做、鼠标悬停高亮。
+## 工具切换、区块选择、输入分发、撤销/重做、缩放、鼠标悬停高亮
 class_name MainController
 extends Node2D
 
@@ -11,17 +11,26 @@ enum ToolMode { BRUSH, PAN, ERASER }
 @onready var brush_button: Button = $UI/TopMenuMargin/TopMenu/BrushButton
 @onready var pan_button: Button = $UI/TopMenuMargin/TopMenu/PanButton
 @onready var eraser_button: Button = $UI/TopMenuMargin/TopMenu/EraserButton
-@onready var block_grass: Button = $UI/BlockForm/Panel/Margin/Blocks/BlockGrass
-@onready var block_mountain: Button = $UI/BlockForm/Panel/Margin/Blocks/BlockMountain
-@onready var block_water: Button = $UI/BlockForm/Panel/Margin/Blocks/BlockWater
+@onready var groups_container: VBoxContainer = $UI/BlockForm/Margin/GroupsScroll/Groups
+@onready var zoom_out_btn: Button = $UI/ZoomBar/HBox/ZoomOut
+@onready var zoom_in_btn: Button = $UI/ZoomBar/HBox/ZoomIn
+@onready var zoom_label: Label = $UI/ZoomBar/HBox/ZoomLabel
+@onready var undo_btn: Button = $UI/ZoomBar/HBox/UndoButton
+@onready var redo_btn: Button = $UI/ZoomBar/HBox/RedoButton
+
+# 数据
+var block_table: BlockTableData = null
+var block_items: Array[BlockItemData] = []  # 扁平化列表，索引即 block_id
 
 # 状态
 var _tool: ToolMode = ToolMode.BRUSH
-var _selected_block_id: int = HexMap.BLOCK_GRASS_ID
+var _selected_block_id: int = 0
 var _undo_stack := UndoStack.new()
 
 # 平移
 var _panning := false
+var _previous_tool: ToolMode = ToolMode.BRUSH  # 临时拖动前的工具模式
+var _temp_pan_active := false  # 是否处于空格/中键触发的临时拖动
 
 # 画笔/橡皮擦
 var _drawing := false
@@ -30,36 +39,58 @@ var _last_painted_coord := Vector2i(99999, 99999)
 # 鼠标悬停
 var _hover_coord := Vector2i(99999, 99999)
 
+# 缩放
+const ZOOM_MIN := 0.1
+const ZOOM_MAX := 2.0
+const ZOOM_STEP := 0.1
+
 
 func _ready() -> void:
 	camera.enabled = true
-	brush_button.pressed.connect(_on_tool_brush)
-	pan_button.pressed.connect(_on_tool_pan)
-	eraser_button.pressed.connect(_on_tool_eraser)
-	block_grass.pressed.connect(_on_block_grass)
-	block_mountain.pressed.connect(_on_block_mountain)
-	block_water.pressed.connect(_on_block_water)
+
+	# 加载区块表数据
+	block_table = BlockTableData.parse_from_md("res://asset/ico/颜色映射.md")
+	block_items = block_table.get_all_items()
+
+	# 生成 TileSet
+	hex_map.setup_tileset(block_items)
+
+	# 构建右侧栏
+	_build_block_form()
+
+	# 连接信号
+	brush_button.pressed.connect(func(): _set_tool(ToolMode.BRUSH))
+	pan_button.pressed.connect(func(): _set_tool(ToolMode.PAN))
+	eraser_button.pressed.connect(func(): _set_tool(ToolMode.ERASER))
+	zoom_out_btn.pressed.connect(_on_zoom_out)
+	zoom_in_btn.pressed.connect(_on_zoom_in)
+	undo_btn.pressed.connect(_do_undo)
+	redo_btn.pressed.connect(_do_redo)
+
 	_set_tool(ToolMode.BRUSH)
-	_set_selected_block(HexMap.BLOCK_GRASS_ID)
+	if block_items.size() > 0:
+		_selected_block_id = 0
+	_update_zoom_label()
 
 
-func _on_tool_brush() -> void:
-	_set_tool(ToolMode.BRUSH)
+## 构建右侧栏：实例化每个组
+func _build_block_form() -> void:
+	var item_scene := preload("res://ui/block_item.tscn")
+	var group_scene := preload("res://ui/block_group.tscn")
+	for group_data in block_table.groups:
+		var group: BlockGroup = group_scene.instantiate()
+		group.setup(group_data, item_scene)
+		group.item_selected.connect(_on_block_selected)
+		groups_container.add_child(group)
 
-func _on_tool_pan() -> void:
-	_set_tool(ToolMode.PAN)
 
-func _on_tool_eraser() -> void:
-	_set_tool(ToolMode.ERASER)
-
-func _on_block_grass() -> void:
-	_set_selected_block(HexMap.BLOCK_GRASS_ID)
-
-func _on_block_mountain() -> void:
-	_set_selected_block(HexMap.BLOCK_MOUNTAIN_ID)
-
-func _on_block_water() -> void:
-	_set_selected_block(HexMap.BLOCK_WATER_ID)
+func _on_block_selected(item: BlockItemData) -> void:
+	_selected_block_id = block_items.find(item)
+	# 更新所有项的选中状态
+	for group in groups_container.get_children():
+		for item_node in group.items_grid.get_children():
+			if item_node is BlockItem:
+				item_node.button_pressed = (item_node.data == item)
 
 
 func _set_tool(tool: ToolMode) -> void:
@@ -77,22 +108,22 @@ func _set_tool(tool: ToolMode) -> void:
 	queue_redraw()
 
 
-func _set_selected_block(block_id: int) -> void:
-	_selected_block_id = block_id
-	block_grass.button_pressed = (block_id == HexMap.BLOCK_GRASS_ID)
-	block_mountain.button_pressed = (block_id == HexMap.BLOCK_MOUNTAIN_ID)
-	block_water.button_pressed = (block_id == HexMap.BLOCK_WATER_ID)
-
-
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed:
+	if event is InputEventKey:
 		var k := event as InputEventKey
-		if k.keycode == KEY_Z and (k.ctrl_pressed or k.meta_pressed):
-			_do_undo()
+		if k.keycode == KEY_SPACE:
+			if k.pressed:
+				_enter_temp_pan()
+			else:
+				_exit_temp_pan()
 			return
-		if k.keycode == KEY_Y and (k.ctrl_pressed or k.meta_pressed):
-			_do_redo()
-			return
+		if k.pressed:
+			if k.keycode == KEY_Z and (k.ctrl_pressed or k.meta_pressed):
+				_do_undo()
+				return
+			if k.keycode == KEY_Y and (k.ctrl_pressed or k.meta_pressed):
+				_do_redo()
+				return
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -100,8 +131,40 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_left_mouse_down()
 			else:
 				_on_left_mouse_up()
+		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
+			if mb.pressed:
+				_enter_temp_pan()
+				_panning = true  # 中键按下直接开始拖动
+			else:
+				_panning = false
+				_exit_temp_pan()
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			# 鼠标在右侧表单区域时，滚轮交给表单滚动，不缩放地图
+			if $UI/BlockForm.get_global_rect().has_point(get_viewport().get_mouse_position()):
+				return
+			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_zoom_at_mouse(1.0 + ZOOM_STEP)
+			else:
+				_zoom_at_mouse(1.0 - ZOOM_STEP)
 	elif event is InputEventMouseMotion:
 		_on_mouse_motion(event)
+
+
+## 进入临时拖动模式（空格/中键按下）
+func _enter_temp_pan() -> void:
+	if _temp_pan_active:
+		return
+	_previous_tool = _tool
+	_temp_pan_active = true
+	_set_tool(ToolMode.PAN)
+
+
+## 退出临时拖动模式（空格/中键抬起），恢复上一个工具
+func _exit_temp_pan() -> void:
+	if not _temp_pan_active:
+		return
+	_temp_pan_active = false
+	_set_tool(_previous_tool)
 
 
 func _on_left_mouse_down() -> void:
@@ -180,6 +243,39 @@ func _do_redo() -> void:
 		var after: Dictionary = entry["after"]
 		hex_map.set_cell_data(coord, after)
 	queue_redraw()
+
+
+# === 缩放 ===
+
+## 以鼠标位置为中心缩放
+func _zoom_at_mouse(factor: float) -> void:
+	var new_zoom := clampf(camera.zoom.x * factor, ZOOM_MIN, ZOOM_MAX)
+	if new_zoom == camera.zoom.x:
+		return
+	var mouse_world := get_global_mouse_position()
+	camera.zoom = Vector2(new_zoom, new_zoom)
+	# 缩放后让鼠标世界坐标保持在原位
+	camera.position = mouse_world - (get_viewport().get_mouse_position() - get_viewport().get_visible_rect().size / 2.0) / new_zoom
+	_update_zoom_label()
+
+
+## 以屏幕中心缩放（按钮触发）
+func _zoom_by_step(delta: float) -> void:
+	var new_zoom := clampf(camera.zoom.x + delta, ZOOM_MIN, ZOOM_MAX)
+	camera.zoom = Vector2(new_zoom, new_zoom)
+	_update_zoom_label()
+
+
+func _on_zoom_out() -> void:
+	_zoom_by_step(-ZOOM_STEP)
+
+
+func _on_zoom_in() -> void:
+	_zoom_by_step(ZOOM_STEP)
+
+
+func _update_zoom_label() -> void:
+	zoom_label.text = "%d%%" % int(camera.zoom.x * 100.0)
 
 
 # 绘制鼠标悬停高亮（画笔/橡皮擦模式）

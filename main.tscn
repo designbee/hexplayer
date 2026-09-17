@@ -1,19 +1,34 @@
-[gd_scene format=3 uid="uid://c22yenjjq7mb5"]
+[gd_scene format=4 uid="uid://c22yenjjq7mb5"]
 
-[ext_resource type="Script" path="res://main.gd" id="1_0xm2m"]
-[ext_resource type="Script" path="res://map/hex_map.gd" id="2_h2yge"]
+[ext_resource type="Script" uid="uid://dllntciv8v5pa" path="res://main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://dk2513frjxq8h" path="res://test.tscn" id="2_h2yge"]
+[ext_resource type="Script" uid="uid://i8sj1i3y255r" path="res://map/hex_map.gd" id="2_hexmap"]
+[ext_resource type="PackedScene" uid="uid://c41k1rwgdp20f" path="res://test2.tscn" id="4_1bvp3"]
 
-[node name="Node2D" type="Node2D" unique_id=111714461]
-script = ExtResource("1_0xm2m")
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_1bvp3"]
+scenes/1/scene = ExtResource("2_h2yge")
 
-[node name="HexMap" type="TileMapLayer" parent="." unique_id=930441373]
-script = ExtResource("2_h2yge")
+[sub_resource type="TileSet" id="TileSet_8uh7m"]
+tile_shape = 3
+tile_size = Vector2i(68, 76)
+sources/0 = SubResource("TileSetScenesCollectionSource_1bvp3")
 
-[node name="MainCamera" type="Camera2D" parent="." unique_id=288269280]
+[node name="Node2D" type="Node2D" unique_id=526580433]
+script = ExtResource("1_main")
 
-[node name="UI" type="CanvasLayer" parent="." unique_id=779810753]
+[node name="HexMap" type="TileMapLayer" parent="." unique_id=1281000997]
+tile_map_data = PackedByteArray("AAD9/wIAAAAAAAAAAQD8/wEAAAAAAAAAAQD9/wEAAAAAAAAAAQD+/wIAAAAAAAAAAQD8/wIAAAAAAAAAAQD+/wEAAAAAAAAAAQD/////AAAAAAAAAQD+/wAAAAAAAAAAAQD//wAAAAAAAAAAAQD//wEAAAAAAAAAAQD//wIAAAAAAAAAAQABAAIAAAAAAAAAAQD4/wkAAAAAAAAAAQD4/woAAAAAAAAAAQD4/wsAAAAAAAAAAQD5/wsAAAAAAAAAAQD6/wsAAAAAAAAAAQD7/wsAAAAAAAAAAQD7/wwAAAAAAAAAAQD8/wwAAAAAAAAAAQD9/wwAAAAAAAAAAQD+/wwAAAAAAAAAAQD+/wsAAAAAAAAAAQD//wsAAAAAAAAAAQAAAAsAAAAAAAAAAQD8/wgAAAAAAAAAAQD8/wcAAAAAAAAAAQD9/wcAAAAAAAAAAQD9/wgAAAAAAAAAAQAAAAEAAAAAAAAAAQAAAAIAAAAAAAAAAQA=")
+tile_set = SubResource("TileSet_8uh7m")
+script = ExtResource("2_hexmap")
 
-[node name="TopMenuMargin" type="MarginContainer" parent="UI" unique_id=312721378]
+[node name="Node2D" parent="." unique_id=1763401236 instance=ExtResource("4_1bvp3")]
+visible = false
+
+[node name="MainCamera" type="Camera2D" parent="." unique_id=1932805799]
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1828180771]
+
+[node name="TopMenuMargin" type="MarginContainer" parent="UI" unique_id=175487285]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 56.0
@@ -22,77 +37,92 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="TopMenu" type="HBoxContainer" parent="UI/TopMenuMargin" unique_id=807888113]
+[node name="TopMenu" type="HBoxContainer" parent="UI/TopMenuMargin" unique_id=781859258]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="BrushButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=1218461600]
+[node name="BrushButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=258542839]
 custom_minimum_size = Vector2(80, 36)
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
 text = "画笔"
 
-[node name="PanButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=1321651332]
+[node name="PanButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=1253634823]
 custom_minimum_size = Vector2(80, 36)
 layout_mode = 2
 toggle_mode = true
 text = "拖动"
 
-[node name="EraserButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=1756845743]
+[node name="EraserButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=1939733835]
 custom_minimum_size = Vector2(80, 36)
 layout_mode = 2
 toggle_mode = true
 text = "橡皮擦"
 
-[node name="BlockForm" type="Control" parent="UI" unique_id=838787557]
+[node name="BlockForm" type="PanelContainer" parent="UI" unique_id=682267896]
 custom_minimum_size = Vector2(210, 0)
-layout_mode = 3
 anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -210.0
+offset_top = 56.0
 grow_horizontal = 0
 
-[node name="Panel" type="PanelContainer" parent="UI/BlockForm" unique_id=1373501796]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Margin" type="MarginContainer" parent="UI/BlockForm/Panel" unique_id=1122048718]
+[node name="Margin" type="MarginContainer" parent="UI/BlockForm" unique_id=192962882]
 layout_mode = 2
 theme_override_constants/margin_left = 8
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="Blocks" type="VBoxContainer" parent="UI/BlockForm/Panel/Margin" unique_id=2097182981]
+[node name="GroupsScroll" type="ScrollContainer" parent="UI/BlockForm/Margin" unique_id=1378303188]
 layout_mode = 2
-theme_override_constants/separation = 6
+horizontal_scroll_mode = 0
 
-[node name="Title" type="Label" parent="UI/BlockForm/Panel/Margin/Blocks" unique_id=2136390361]
+[node name="Groups" type="VBoxContainer" parent="UI/BlockForm/Margin/GroupsScroll" unique_id=963845611]
 layout_mode = 2
-text = "区块选择"
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
 
-[node name="BlockGrass" type="Button" parent="UI/BlockForm/Panel/Margin/Blocks" unique_id=229345499]
-custom_minimum_size = Vector2(180, 36)
-layout_mode = 2
-toggle_mode = true
-button_pressed = true
-text = "草原"
+[node name="ZoomBar" type="PanelContainer" parent="UI" unique_id=1378949847]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -52.0
+offset_right = 212.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 0
 
-[node name="BlockMountain" type="Button" parent="UI/BlockForm/Panel/Margin/Blocks" unique_id=2016379319]
-custom_minimum_size = Vector2(180, 36)
+[node name="HBox" type="HBoxContainer" parent="UI/ZoomBar" unique_id=590076584]
 layout_mode = 2
-toggle_mode = true
-text = "山地"
+theme_override_constants/separation = 2
 
-[node name="BlockWater" type="Button" parent="UI/BlockForm/Panel/Margin/Blocks" unique_id=248784224]
-custom_minimum_size = Vector2(180, 36)
+[node name="ZoomOut" type="Button" parent="UI/ZoomBar/HBox" unique_id=60142749]
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
-toggle_mode = true
-text = "水系"
+text = "-"
+
+[node name="ZoomLabel" type="Label" parent="UI/ZoomBar/HBox" unique_id=205325167]
+custom_minimum_size = Vector2(56, 36)
+layout_mode = 2
+text = "100%"
+horizontal_alignment = 1
+
+[node name="ZoomIn" type="Button" parent="UI/ZoomBar/HBox" unique_id=1136099579]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+text = "+"
+
+[node name="UndoButton" type="Button" parent="UI/ZoomBar/HBox" unique_id=1980698806]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+text = "↶"
+
+[node name="RedoButton" type="Button" parent="UI/ZoomBar/HBox" unique_id=1338955867]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+text = "↷"

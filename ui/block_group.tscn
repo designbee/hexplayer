@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/block_group.gd" id="1_grp"]
+
+[node name="BlockGroup" type="VBoxContainer"]
+custom_minimum_size = Vector2(186, 0)
+script = ExtResource("1_grp")
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="."]
+text = "分组"
+
+[node name="Items" type="GridContainer" parent="."]
+columns = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4

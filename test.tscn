@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dk2513frjxq8h"]
+
+[ext_resource type="Texture2D" uid="uid://bgwbw3bgxh73m" path="res://asset/ico/hex.svg" id="1_37kl0"]
+
+[node name="Node2D" type="Sprite2D" unique_id=1261957176]
+texture = ExtResource("1_37kl0")
