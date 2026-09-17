@@ -22,7 +22,12 @@ static func parse_from_md(md_path: String) -> BlockTableData:
 	var file := FileAccess.open(md_path, FileAccess.READ)
 	var text := file.get_as_text()
 	file.close()
+	return parse_from_text(text)
 
+
+## 从文本解析构建 BlockTableData（不依赖文件 I/O，用于 Web 导出）
+static func parse_from_text(text: String) -> BlockTableData:
+	var table := BlockTableData.new()
 	var current_group: BlockGroupData = null
 	for raw_line in text.split("\n"):
 		var line := raw_line.strip_edges()

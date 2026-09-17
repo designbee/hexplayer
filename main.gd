@@ -31,6 +31,7 @@ var _undo_stack := UndoStack.new()
 var _panning := false
 var _previous_tool: ToolMode = ToolMode.BRUSH  # 临时拖动前的工具模式
 var _temp_pan_active := false  # 是否处于空格/中键触发的临时拖动
+var _temp_eraser_active := false  # 是否处于右键触发的临时擦除
 
 # 画笔/橡皮擦
 var _drawing := false
@@ -49,7 +50,7 @@ func _ready() -> void:
 	camera.enabled = true
 
 	# 加载区块表数据
-	block_table = BlockTableData.parse_from_md("res://asset/ico/颜色映射.md")
+	block_table = BlockTableData.parse_from_text(ColorData.RAW_MD)
 	block_items = block_table.get_all_items()
 
 	# 生成 TileSet
@@ -167,7 +168,21 @@ func _exit_temp_pan() -> void:
 	_set_tool(_previous_tool)
 
 
+## Alt+左键按下：临时切换到橡皮擦，开始擦除
 func _on_left_mouse_down() -> void:
+	if _temp_pan_active or _tool == ToolMode.PAN:
+		_panning = true
+		return
+	# Alt+左键 → 临时擦除
+	if _temp_eraser_active or (_tool != ToolMode.ERASER and Input.is_key_pressed(KEY_ALT)):
+		if not _temp_eraser_active:
+			_previous_tool = _tool
+			_temp_eraser_active = true
+			_set_tool(ToolMode.ERASER)
+		_undo_stack.begin_step()
+		_drawing = true
+		_erase_at(_get_mouse_coord())
+		return
 	match _tool:
 		ToolMode.BRUSH:
 			_undo_stack.begin_step()
@@ -186,6 +201,9 @@ func _on_left_mouse_up() -> void:
 		_undo_stack.end_step()
 		_drawing = false
 		_last_painted_coord = Vector2i(99999, 99999)
+	if _temp_eraser_active:
+		_temp_eraser_active = false
+		_set_tool(_previous_tool)
 	if _panning:
 		_panning = false
 

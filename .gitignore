@@ -1,3 +1,11 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+/builds/
+
+# Web export (部署到 gh-pages 分支，不在主分支跟踪)
+/src/
+
+# OS files
+.DS_Store
+Thumbs.db
