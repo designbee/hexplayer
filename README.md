@@ -2,6 +2,8 @@
 
 在线六边形地图草稿工具，基于 Godot 4 制作，可运行在浏览器中。
 
+**在线体验：** https://designbee.github.io/hexplayer/
+
 ## 功能
 
 - 矢量六边形图块渲染（SVG 场景化 TileSet）
