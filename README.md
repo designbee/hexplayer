@@ -27,9 +27,9 @@
 ## Web 导出
 
 ```bash
-# 在 Godot 编辑器中：项目 → 导出 → Web → 导出到 src/ 目录
+# 在 Godot 编辑器中：项目 → 导出 → Web → 导出到 docs/ 目录
 # 然后用本地服务器测试：
-cd src
+cd docs
 python -m http.server 8080
 # 访问 http://localhost:8080
 ```

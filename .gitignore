@@ -3,7 +3,7 @@
 /android/
 /builds/
 
-# Web export (部署到 gh-pages 分支，不在主分支跟踪)
+# Web export (导出目录，不跟踪)
 /src/
 
 # OS files
