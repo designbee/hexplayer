@@ -127,3 +127,27 @@ func get_center_local(coord: Vector2i) -> Vector2:
 ## 获取所有已绘制（非空）格子的坐标列表
 func get_painted_cells() -> Array[Vector2i]:
 	return get_used_cells()
+
+
+## 导出所有格子数据为字典（用于 JSON 序列化）
+func get_tile_data() -> Dictionary:
+	var tiles := {}
+	for coord in get_used_cells():
+		var source_id := get_cell_source_id(coord)
+		tiles["%d,%d" % [coord.x, coord.y]] = source_id
+	return {
+		"version": "0.3",
+		"tile_size": [TILE_SIZE.x, TILE_SIZE.y],
+		"tiles": tiles
+	}
+
+
+## 从字典加载格子数据（清空当前地图后重绘）
+func load_tile_data(data: Dictionary) -> void:
+	clear()
+	var tiles: Dictionary = data.get("tiles", {})
+	for key in tiles:
+		var parts: PackedStringArray = key.split(",")
+		var coord := Vector2i(int(parts[0]), int(parts[1]))
+		var source_id := int(tiles[key])
+		set_cell(coord, source_id, ATLAS_COORD)

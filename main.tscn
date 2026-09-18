@@ -1,12 +1,26 @@
 [gd_scene format=4 uid="uid://c22yenjjq7mb5"]
 
 [ext_resource type="Script" uid="uid://dllntciv8v5pa" path="res://main.gd" id="1_main"]
-[ext_resource type="PackedScene" uid="uid://dk2513frjxq8h" path="res://test.tscn" id="2_h2yge"]
+[ext_resource type="Texture2D" uid="uid://bgwbw3bgxh73m" path="res://asset/ico/hex.svg" id="2_h2yge"]
 [ext_resource type="Script" uid="uid://i8sj1i3y255r" path="res://map/hex_map.gd" id="2_hexmap"]
-[ext_resource type="PackedScene" uid="uid://c41k1rwgdp20f" path="res://test2.tscn" id="4_1bvp3"]
+
+[sub_resource type="PackedScene" id="PackedScene_1bvp3"]
+_bundled = {
+"conn_count": 0,
+"conns": PackedInt32Array(),
+"editable_instances": [],
+"id_paths": [],
+"names": PackedStringArray("Node2D", "Sprite2D", "texture"),
+"node_count": 1,
+"node_ids": PackedInt32Array(1261957176),
+"node_paths": [],
+"nodes": PackedInt32Array(-1, -1, 1, 0, -1, 1, 2, 0, 0),
+"variants": [ExtResource("2_h2yge")],
+"version": 3
+}
 
 [sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_1bvp3"]
-scenes/1/scene = ExtResource("2_h2yge")
+scenes/1/scene = SubResource("PackedScene_1bvp3")
 
 [sub_resource type="TileSet" id="TileSet_8uh7m"]
 tile_shape = 3
@@ -20,9 +34,6 @@ script = ExtResource("1_main")
 tile_map_data = PackedByteArray("AAD9/wIAAAAAAAAAAQD8/wEAAAAAAAAAAQD9/wEAAAAAAAAAAQD+/wIAAAAAAAAAAQD8/wIAAAAAAAAAAQD+/wEAAAAAAAAAAQD/////AAAAAAAAAQD+/wAAAAAAAAAAAQD//wAAAAAAAAAAAQD//wEAAAAAAAAAAQD//wIAAAAAAAAAAQABAAIAAAAAAAAAAQD4/wkAAAAAAAAAAQD4/woAAAAAAAAAAQD4/wsAAAAAAAAAAQD5/wsAAAAAAAAAAQD6/wsAAAAAAAAAAQD7/wsAAAAAAAAAAQD7/wwAAAAAAAAAAQD8/wwAAAAAAAAAAQD9/wwAAAAAAAAAAQD+/wwAAAAAAAAAAQD+/wsAAAAAAAAAAQD//wsAAAAAAAAAAQAAAAsAAAAAAAAAAQD8/wgAAAAAAAAAAQD8/wcAAAAAAAAAAQD9/wcAAAAAAAAAAQD9/wgAAAAAAAAAAQAAAAEAAAAAAAAAAQAAAAIAAAAAAAAAAQA=")
 tile_set = SubResource("TileSet_8uh7m")
 script = ExtResource("2_hexmap")
-
-[node name="Node2D" parent="." unique_id=1763401236 instance=ExtResource("4_1bvp3")]
-visible = false
 
 [node name="MainCamera" type="Camera2D" parent="." unique_id=1932805799]
 
@@ -59,6 +70,19 @@ custom_minimum_size = Vector2(80, 36)
 layout_mode = 2
 toggle_mode = true
 text = "橡皮擦"
+
+[node name="VSeparator" type="VSeparator" parent="UI/TopMenuMargin/TopMenu" unique_id=987654321]
+layout_mode = 2
+
+[node name="ExportButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=123456789]
+custom_minimum_size = Vector2(80, 36)
+layout_mode = 2
+text = "导出"
+
+[node name="ImportButton" type="Button" parent="UI/TopMenuMargin/TopMenu" unique_id=987654322]
+custom_minimum_size = Vector2(80, 36)
+layout_mode = 2
+text = "导入"
 
 [node name="BlockForm" type="PanelContainer" parent="UI" unique_id=682267896]
 custom_minimum_size = Vector2(210, 0)
@@ -126,3 +150,19 @@ text = "↶"
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 text = "↷"
+
+[node name="SaveReminder" type="Label" parent="UI" unique_id=555555555]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -80.0
+offset_right = 300.0
+offset_bottom = -56.0
+grow_vertical = 0
+text = "未保存"
+horizontal_alignment = 0
+
+[node name="SaveTimer" type="Timer" parent="." unique_id=666666666]
+wait_time = 180.0
+autostart = true

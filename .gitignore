@@ -6,6 +6,9 @@
 # Web export (导出目录，不跟踪)
 /src/
 
+# 插件（MCP 开发工具，非项目代码）
+/addons/
+
 # OS files
 .DS_Store
 Thumbs.db

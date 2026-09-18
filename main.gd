@@ -17,6 +17,10 @@ enum ToolMode { BRUSH, PAN, ERASER }
 @onready var zoom_label: Label = $UI/ZoomBar/HBox/ZoomLabel
 @onready var undo_btn: Button = $UI/ZoomBar/HBox/UndoButton
 @onready var redo_btn: Button = $UI/ZoomBar/HBox/RedoButton
+@onready var export_btn: Button = $UI/TopMenuMargin/TopMenu/ExportButton
+@onready var import_btn: Button = $UI/TopMenuMargin/TopMenu/ImportButton
+@onready var save_reminder: Label = $UI/SaveReminder
+@onready var save_timer: Timer = $SaveTimer
 
 # 数据
 var block_table: BlockTableData = null
@@ -39,6 +43,11 @@ var _last_painted_coord := Vector2i(99999, 99999)
 
 # 鼠标悬停
 var _hover_coord := Vector2i(99999, 99999)
+
+# 保存提醒
+var _last_save_time: float = -1.0  # -1 表示从未保存
+# 导入轮询（Web 环境）
+var _waiting_for_import := false
 
 # 缩放
 const ZOOM_MIN := 0.1
@@ -67,6 +76,21 @@ func _ready() -> void:
 	zoom_in_btn.pressed.connect(_on_zoom_in)
 	undo_btn.pressed.connect(_do_undo)
 	redo_btn.pressed.connect(_do_redo)
+	export_btn.pressed.connect(_on_export)
+	import_btn.pressed.connect(_on_import)
+	save_timer.timeout.connect(_on_save_timer_tick)
+
+	# 撤销/重做按钮使用 SVG 图标（缩放到 20x20 适配按钮）
+	var undo_tex := load("res://asset/ico/undo.svg") as Texture2D
+	var redo_tex := load("res://asset/ico/redo.svg") as Texture2D
+	var undo_img := undo_tex.get_image()
+	undo_img.resize(20, 20, Image.INTERPOLATE_LANCZOS)
+	var redo_img := redo_tex.get_image()
+	redo_img.resize(20, 20, Image.INTERPOLATE_LANCZOS)
+	undo_btn.icon = ImageTexture.create_from_image(undo_img)
+	redo_btn.icon = ImageTexture.create_from_image(redo_img)
+	undo_btn.text = ""
+	redo_btn.text = ""
 
 	_set_tool(ToolMode.BRUSH)
 	if block_items.size() > 0:
@@ -315,3 +339,119 @@ func _draw() -> void:
 	var closed := points.duplicate()
 	closed.append(points[0])
 	draw_polyline(closed, Color(1.0, 1.0, 1.0, 0.85), 2.0, true)
+
+
+# === 导出 / 导入 / 保存提醒 ===
+
+## 导出 JSON（Web 环境通过 JavaScript 触发下载）
+func _on_export() -> void:
+	var data := hex_map.get_tile_data()
+	var json_str := JSON.stringify(data)
+	var filename := "hexmap_%s.json" % Time.get_datetime_string_from_system().replace(":", "").replace(" ", "_")
+
+	if OS.has_feature("web"):
+		var js := (
+			"var blob = new Blob([\"%s\"], {type: 'application/json'});\n" +
+			"var a = document.createElement('a');\n" +
+			"a.href = URL.createObjectURL(blob);\n" +
+			"a.download = '%s';\n" +
+			"document.body.appendChild(a);\n" +
+			"a.click();\n" +
+			"document.body.removeChild(a);"
+		) % [json_str.replace("\"", "\\\""), filename]
+		JavaScriptBridge.eval(js)
+	else:
+		var path := "user://%s" % filename
+		FileAccess.open(path, FileAccess.WRITE).store_string(json_str)
+
+	_last_save_time = Time.get_ticks_msec() / 1000.0
+	_update_save_reminder()
+
+
+## 导入 JSON
+## Web 环境用浏览器原生文件选择器（通过 JavaScript）
+## 桌面环境用 Godot FileDialog
+func _on_import() -> void:
+	if OS.has_feature("web"):
+		var js := (
+			"var input = document.createElement('input');\n" +
+			"input.type = 'file';\n" +
+			"input.accept = '.json';\n" +
+			"input.onchange = function(e) {\n" +
+			"    var file = e.target.files[0];\n" +
+			"    if (!file) return;\n" +
+			"    var reader = new FileReader();\n" +
+			"    reader.onload = function(ev) {\n" +
+			"        window._godot_import_data = ev.target.result;\n" +
+			"    };\n" +
+			"    reader.readAsText(file);\n" +
+			"};\n" +
+			"input.click();"
+		)
+		JavaScriptBridge.eval(js)
+		_waiting_for_import = true
+	else:
+		var dialog := FileDialog.new()
+		dialog.title = "选择地图文件"
+		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+		dialog.access = FileDialog.ACCESS_FILESYSTEM
+		dialog.filters = PackedStringArray(["*.json ; JSON 文件"])
+		add_child(dialog)
+		dialog.file_selected.connect(_on_import_file_selected)
+		dialog.canceled.connect(dialog.queue_free)
+		dialog.popup_centered(Vector2i(600, 400))
+
+
+func _process(_delta: float) -> void:
+	if _waiting_for_import:
+		var result = JavaScriptBridge.eval("window._godot_import_data")
+		if result != null:
+			_waiting_for_import = false
+			JavaScriptBridge.eval("window._godot_import_data = null")
+			_import_from_string(result)
+
+
+func _on_import_file_selected(path: String) -> void:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if not file:
+		push_error("无法读取文件: %s" % path)
+		return
+	var json_str := file.get_as_text()
+	file.close()
+	_import_from_string(json_str)
+
+
+## 从 JSON 字符串导入地图数据（含校验）
+func _import_from_string(json_str: String) -> void:
+	var parsed = JSON.parse_string(json_str)
+	if not parsed is Dictionary:
+		push_error("无效的 JSON 格式")
+		return
+	if not parsed.has("tiles") or not parsed["tiles"] is Dictionary:
+		push_error("不是有效的地图存档（缺少 tiles 字段）")
+		return
+	hex_map.load_tile_data(parsed)
+	_undo_stack = UndoStack.new()
+	queue_redraw()
+	_last_save_time = Time.get_ticks_msec() / 1000.0
+	_update_save_reminder()
+
+
+## 保存提醒计时器触发
+func _on_save_timer_tick() -> void:
+	_update_save_reminder()
+
+
+## 更新左下角保存提醒文字
+func _update_save_reminder() -> void:
+	if _last_save_time < 0:
+		save_reminder.text = "未保存"
+		return
+	var elapsed := int(Time.get_ticks_msec() / 1000.0 - _last_save_time)
+	var minutes := elapsed / 60
+	if minutes < 1:
+		save_reminder.text = "刚刚保存"
+	elif minutes < 60:
+		save_reminder.text = "%d 分钟前保存" % minutes
+	else:
+		save_reminder.text = "%d 小时前保存" % (minutes / 60)
